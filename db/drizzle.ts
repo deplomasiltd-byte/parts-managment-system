@@ -9,14 +9,14 @@ if (typeof window === "undefined") {
   config({ path: ".env" }); // or .env.local
 }
 
-// Create a more robust connection with error handling
+// Create an HTTP connection (note: HTTP driver doesn't support transactions)
 const sql = neon(process.env.DATABASE_URL!);
 
 const db = drizzle(sql, { schema });
 
 // Only log in non-browser environments to avoid stdout errors
 if (typeof window === "undefined") {
-  console.log("Database connection initialized successfully");
+  console.log("Database connection initialized successfully with HTTP driver");
 }
 
 export { db };

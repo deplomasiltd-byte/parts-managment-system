@@ -5,13 +5,12 @@ import { IssuePartsTable } from "@/components/parts/issue-parts-table";
 import { Button } from "@/components/ui/button";
 import { Download, Upload, RefreshCw } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState, useRef } from "react";
 
 export default function IssuePartsPage() {
   const { data: session } = authClient.useSession();
   const [userRole, setUserRole] = useState<string | null>(null);
-  const queryClient = useQueryClient();
+  const refreshTriggerRef = useRef(0);
 
   useEffect(() => {
     if (session?.user) {
@@ -25,7 +24,9 @@ export default function IssuePartsPage() {
   const isAdmin = userRole === "admin";
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["issue-parts"] });
+    // Trigger refresh by incrementing the trigger ref
+    refreshTriggerRef.current += 1;
+    // The IssuePartsTable will detect this change and refresh its child components
   };
 
   return (
@@ -50,31 +51,10 @@ export default function IssuePartsPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             بروزرسانی
           </Button>
-
-          {isAdmin && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-border text-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                وارد کردن
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-border text-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                خروجی گرفتن
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
-      <IssuePartsTable />
+      <IssuePartsTable refreshTrigger={refreshTriggerRef.current} />
     </div>
   );
 }

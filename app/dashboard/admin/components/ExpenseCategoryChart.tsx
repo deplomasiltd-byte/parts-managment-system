@@ -18,7 +18,9 @@ export const ExpenseCategoryChart = ({ data }: ExpenseCategoryChartProps) => {
       <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
         <div className="text-center">
           <p className="font-medium">اطلاعات موجود نیست</p>
-          <p className="text-sm">هیچ مصرفی در بازه انتخاب شده یافت نشد</p>
+          <p className="text-sm">
+            بر اساس این تاریخ هیچ اطلاعاتی موجود نمیباشد
+          </p>
         </div>
       </div>
     );

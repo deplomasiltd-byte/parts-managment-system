@@ -96,7 +96,7 @@ export function PartsTable() {
     pageIndex: 0,
     pageSize: isMobile ? 5 : 10,
   });
-  const [sectionFilter, setSectionFilter] = useState<string>("");
+
   const [activeFilter, setActiveFilter] = useState<string>("");
 
   // Fetch parts with current filters - always ensure user is authenticated
@@ -110,11 +110,21 @@ export function PartsTable() {
       page: pagination.pageIndex + 1,
       limit: pagination.pageSize,
       search: globalFilter || undefined,
-      section: sectionFilter || undefined,
       active: activeFilter ? activeFilter === "true" : undefined,
     },
     {
       enabled: !!session?.user, // Only fetch when user is authenticated
+    }
+  );
+
+  // Fetch all parts (without active filter) for accurate counting
+  const { data: allPartsResponse } = useParts(
+    {
+      page: 1,
+      limit: 10000, // Large limit to get all parts for counting
+    },
+    {
+      enabled: !!session?.user,
     }
   );
 
@@ -129,9 +139,12 @@ export function PartsTable() {
     limit: 10,
   };
 
-  // Calculate summary statistics
-  const totalParts = paginationData.total || 0;
-  const activeParts = partsData.filter((part) => part.active).length;
+  // Extract all parts data for accurate counting
+  const allPartsData = (allPartsResponse as PartsResponse)?.data || [];
+
+  // Calculate summary statistics using all parts data for accurate counts
+  const totalParts = allPartsData.length;
+  const activeParts = allPartsData.filter((part) => part.active).length;
   const inactiveParts = totalParts - activeParts;
 
   // Define columns for mobile and desktop
@@ -386,22 +399,23 @@ export function PartsTable() {
     const handleDelete = async () => {
       if (!isAdmin) {
         alert(
-          "شما اجازه حذف پرزه را ندارید. فقط ادمین می‌تواند پرزه را حذف کند."
+          "شما اجازه غیرفعال کردن پرزه را ندارید. فقط ادمین می‌تواند پرزه را غیرفعال کند."
         );
         return;
       }
 
       if (
         confirm(
-          `آیا مطمئن هستید که می‌خواهید قطعه "${part.partNumber}" را حذف کنید؟`
+          `آیا مطمئن هستید که می‌خواهید قطعه "${part.partNumber}" را غیرفعال کنید؟ (این عمل قطعه را حذف نمی‌کند)`
         )
       ) {
         try {
           await deletePartMutation.mutateAsync(part.id);
+          // Note: deletePartMutation already handles cache invalidation
           onRefetch();
         } catch (error) {
-          console.error("Error deleting part:", error);
-          alert("خطا در حذف قطعه. لطفاً دوباره تلاش کنید.");
+          console.error("Error deactivating part:", error);
+          alert("خطا در غیرفعال کردن قطعه. لطفاً دوباره تلاش کنید.");
         }
       }
     };
@@ -425,7 +439,8 @@ export function PartsTable() {
           throw new Error("Failed to reactivate part");
         }
 
-        onRefetch();
+        // Refetch both current filtered parts and all parts for accurate counts
+        refetch();
       } catch (error) {
         console.error("Error reactivating part:", error);
         alert("خطا در فعال‌سازی مجدد قطعه. لطفاً دوباره تلاش کنید.");
@@ -491,7 +506,7 @@ export function PartsTable() {
                     className="text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    حذف قطعه
+                    غیرفعال کردن
                   </DropdownMenuItem>
                 )}
               </>
@@ -606,15 +621,6 @@ export function PartsTable() {
           />
         </div>
 
-        <div className="relative w-full sm:w-40">
-          <Input
-            placeholder="فیلتر بخش..."
-            value={sectionFilter}
-            onChange={(event) => setSectionFilter(event.target.value)}
-            className="bg-background border-border"
-          />
-        </div>
-
         <Select
           value={activeFilter || "all-status"}
           onValueChange={(value) =>
@@ -631,12 +637,11 @@ export function PartsTable() {
           </SelectContent>
         </Select>
 
-        {(globalFilter || sectionFilter || activeFilter) && (
+        {(globalFilter || activeFilter) && (
           <Button
             variant="ghost"
             onClick={() => {
               setGlobalFilter("");
-              setSectionFilter("");
               setActiveFilter("");
             }}
             className="text-sm text-primary hover:text-primary/80"
@@ -715,7 +720,7 @@ export function PartsTable() {
                     <div>
                       <p className="font-medium">هیچ قطعه‌ای یافت نشد</p>
                       <p className="text-sm text-muted-foreground">
-                        {globalFilter || sectionFilter || activeFilter
+                        {globalFilter || activeFilter
                           ? "فیلترهای خود را تغییر دهید"
                           : "با ایجاد اولین قطعه خود شروع کنید"}
                       </p>

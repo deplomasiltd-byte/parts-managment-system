@@ -52,6 +52,7 @@ export async function GET(req: Request) {
         title: expenses.title,
         description: expenses.description,
         amount: expenses.amount,
+        currency: expenses.currency,
         category: expenses.category,
         expenseDate: expenses.expenseDate,
         receiptNumber: expenses.receiptNumber,
@@ -118,6 +119,7 @@ export async function POST(req: Request) {
       title,
       description,
       amount,
+      currency,
       category,
       expenseDate,
       receiptNumber,
@@ -127,24 +129,34 @@ export async function POST(req: Request) {
 
     if (!title || !amount || !category) {
       return NextResponse.json(
-        { success: false, error: "Title, amount, and category are required" },
+        {
+          success: false,
+          error: "Title, amount, and category are required",
+        },
         { status: 400 }
       );
     }
 
-    // Insert the new expense
+    // Insert the new expense (handle currency conditionally)
+    const insertValues: any = {
+      title,
+      description: description || null,
+      amount: amount.toString(),
+      category,
+      expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
+      receiptNumber: receiptNumber || null,
+      vendor: vendor || null,
+      createdBy: createdBy || null,
+    };
+
+    // Only add currency if it exists
+    if (currency) {
+      insertValues.currency = currency;
+    }
+
     const newExpense = await db
       .insert(expenses)
-      .values({
-        title,
-        description: description || null,
-        amount: amount.toString(),
-        category,
-        expenseDate: expenseDate ? new Date(expenseDate) : new Date(),
-        receiptNumber: receiptNumber || null,
-        vendor: vendor || null,
-        createdBy: createdBy || null,
-      })
+      .values(insertValues)
       .returning();
 
     return NextResponse.json({

@@ -180,7 +180,7 @@ export function DashboardClient({
             <div>
               <h3 className="font-medium text-sm sm:text-base">فیلتر زمانی</h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                انتخاب بازه زمانی برای نمایش اطلاعات
+                انتخاب دوره زمانی برای نمایش اطلاعات
               </p>
             </div>
           </div>
@@ -230,7 +230,7 @@ export function DashboardClient({
           <Card className="bg-mechanical border-mechanical shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium">
-                مانده حساب
+                حساب های باقی مانده
               </CardTitle>
               <AlertTriangle className="h-4 w-4 text-amber-600" />
             </CardHeader>
@@ -247,7 +247,7 @@ export function DashboardClient({
           <Card className="bg-mechanical border-mechanical shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium">
-                هشدار کمبود موجودی
+                قسمت هشدار کمبود پرزه
               </CardTitle>
               <PackageSearch className="h-4 w-4 text-red-600" />
             </CardHeader>
@@ -256,7 +256,7 @@ export function DashboardClient({
                 {actualLowStockCount.toLocaleString("fa-IR")}
               </div>
               <p className="text-xs text-muted-foreground">
-                موارد زیر سطح حداقل موجودی
+                مواردی که زیر حداقل موجودی هستند{" "}
               </p>
             </CardContent>
           </Card>
@@ -270,7 +270,7 @@ export function DashboardClient({
               className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
             >
               <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
-              نمای کلی
+              نمای کامل
             </TabsTrigger>
             <TabsTrigger
               value="inventory"
@@ -291,7 +291,7 @@ export function DashboardClient({
               className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
             >
               <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" />
-              گزارش مصارف
+              راپور مصارف
             </TabsTrigger>
           </TabsList>
 
@@ -312,7 +312,7 @@ export function DashboardClient({
                   {trendLoading ? (
                     <div className="flex items-center justify-center h-48 sm:h-64">
                       <Loader
-                        title="در حال بارگذاری نمودار فروش..."
+                        title="در حال بارگذاری چارت فروش..."
                         subtitle="لطفاً منتظر بمانید"
                         size="sm"
                       />
@@ -334,9 +334,9 @@ export function DashboardClient({
                   ) : (
                     <div className="flex flex-col items-center justify-center h-48 sm:h-64 text-muted-foreground">
                       <BarChart3 className="h-12 w-12 mb-2 opacity-50" />
-                      <p>اطلاعات فروشی موجود نیست</p>
+                      <p>اطلاعاتی از فروش موجود نیست</p>
                       <p className="text-xs mt-1">
-                        برای بازه انتخاب شده داده‌ای یافت نشد
+                        در این تاریخی که انتخاب کردین اطلاعاتی موجود نیست{" "}
                       </p>
                     </div>
                   )}
@@ -392,7 +392,6 @@ export function DashboardClient({
                   </div>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs sm:text-sm font-medium">
@@ -413,7 +412,7 @@ export function DashboardClient({
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs sm:text-sm font-medium">
-                    مشتریان فعال
+                    مجموع مشتریان
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -538,7 +537,6 @@ export function DashboardClient({
                   </div>
                 </CardContent>
               </Card>
-
               {/* Performance Analysis */}
               <Card>
                 <CardHeader>
@@ -547,7 +545,7 @@ export function DashboardClient({
                     تحلیل عملکرد
                   </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    ارزیابی عملکرد بر اساس بازه زمانی انتخاب شده
+                    ارزیابی عملکرد بر اساس تاریخ های که انتخاب کردین
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -604,7 +602,7 @@ export function DashboardClient({
                       </div>
                     ) : (
                       <div className="text-center py-4 text-muted-foreground text-sm">
-                        اطلاعات روند فروش موجود نیست
+                        هیچ اطلاعاتی موجود نمیباشد{" "}
                       </div>
                     )}
 

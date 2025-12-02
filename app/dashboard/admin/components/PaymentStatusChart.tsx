@@ -12,7 +12,7 @@ export const PaymentStatusChart = ({ data }: PaymentStatusChartProps) => {
   if (total === 0)
     return (
       <div className="text-center text-muted-foreground">
-        داده‌ای موجود نیست
+        معلومات موجود نیست
       </div>
     );
 
@@ -68,7 +68,7 @@ export const PaymentStatusChart = ({ data }: PaymentStatusChartProps) => {
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded"></div>
-            <span>پرداخت کامل</span>
+            <span> پرداخت های تکمیل شده</span>
           </div>
           <span className="font-medium">
             {data.fullyPaid.toLocaleString("fa-IR")}
@@ -77,7 +77,7 @@ export const PaymentStatusChart = ({ data }: PaymentStatusChartProps) => {
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-amber-500 rounded"></div>
-            <span>پرداخت جزئی</span>
+            <span> پرداخت های ناتکمیل</span>
           </div>
           <span className="font-medium">
             {data.partiallyPaid.toLocaleString("fa-IR")}

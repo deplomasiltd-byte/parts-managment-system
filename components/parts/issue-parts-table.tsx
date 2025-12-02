@@ -59,7 +59,11 @@ interface CartItem {
   customPrice?: number;
 }
 
-export function IssuePartsTable() {
+interface IssuePartsTableProps {
+  refreshTrigger?: number;
+}
+
+export function IssuePartsTable({ refreshTrigger }: IssuePartsTableProps) {
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -432,7 +436,10 @@ export function IssuePartsTable() {
       <div
         className={`grid gap-6 ${isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"}`}
       >
-        <SmartSearchEngine onPartSelect={addToCartFromSearch} />
+        <SmartSearchEngine
+          onPartSelect={addToCartFromSearch}
+          refreshTrigger={refreshTrigger}
+        />
 
         {/* Cart Section */}
         <Card className="border-mechanical shadow-lg">

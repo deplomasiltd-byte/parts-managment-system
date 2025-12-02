@@ -1,7 +1,7 @@
 // app/parts/priority-actions/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,7 +131,13 @@ export default function PriorityActionsPage() {
   const [updatingParts, setUpdatingParts] = useState<Set<number>>(new Set());
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [pendingCostPriceUpdates, setPendingCostPriceUpdates] = useState<
+    Map<number, string>
+  >(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const costPriceDebounceTimers = useRef<Map<number, NodeJS.Timeout>>(
+    new Map()
+  );
   const router = useRouter();
 
   // Authentication and role check
@@ -190,6 +196,16 @@ export default function PriorityActionsPage() {
       setParts(data);
     }
   }, [data]);
+
+  // Cleanup debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      costPriceDebounceTimers.current.forEach((timer) => {
+        clearTimeout(timer);
+      });
+      costPriceDebounceTimers.current.clear();
+    };
+  }, []);
 
   const isLoading = queryLoading;
 
@@ -286,59 +302,112 @@ export default function PriorityActionsPage() {
     }
   };
 
-  // Handle cost price change
-  const handleCostPriceChange = async (id: number, cost_price: string) => {
-    const part = parts.find((p) => p.id === id);
-    if (!part) return;
+  // Debounced cost price update function
+  const executeCostPriceUpdate = useCallback(
+    async (id: number, cost_price: string) => {
+      const part = parts.find((p) => p.id === id);
+      if (!part) return;
 
-    const costPriceNum = parseFloat(cost_price) || 0;
-    const salePriceNum = costPriceNum * 1.2; // 20% markup
-    const sale_price = salePriceNum.toFixed(2);
+      const costPriceNum = parseFloat(cost_price) || 0;
+      const salePriceNum = costPriceNum * 1.2; // 20% markup
+      const sale_price = salePriceNum.toFixed(2);
 
-    // Update local state first
-    setParts((prev) =>
-      prev.map((p) => {
-        if (p.part_number === part.part_number) {
-          const totalCost = p.requested_quantity * costPriceNum;
-          return {
-            ...p,
-            cost_price,
-            sale_price,
-            total_cost: totalCost,
-          };
-        }
-        return p;
-      })
-    );
-
-    // Find all parts with same part number to update in database
-    const samePartNumberParts = parts.filter(
-      (p) => p.part_number === part.part_number
-    );
-
-    try {
-      setUpdatingParts((prev) => new Set(prev).add(id));
-
-      // Update all parts with same part number in database
-      const updatePromises = samePartNumberParts.map((p) =>
-        updatePartDetails(p.id, { cost_price, sale_price })
+      // Find all parts with same part number to update in database
+      const samePartNumberParts = parts.filter(
+        (p) => p.part_number === part.part_number
       );
 
-      await Promise.all(updatePromises);
-      toast.success(
-        `قیمت برای ${samePartNumberParts.length} قطعه با شماره ${part.part_number} بروزرسانی شد`
+      try {
+        setUpdatingParts((prev) => new Set(prev).add(id));
+
+        // Update all parts with same part number in database
+        const updatePromises = samePartNumberParts.map((p) =>
+          updatePartDetails(p.id, { cost_price, sale_price })
+        );
+
+        await Promise.all(updatePromises);
+        toast.success(
+          `قیمت برای ${samePartNumberParts.length} قطعه با شماره ${part.part_number} بروزرسانی شد`
+        );
+      } catch (error) {
+        console.error("Error updating cost price:", error);
+        toast.error("خطا در بروزرسانی قیمت");
+      } finally {
+        setUpdatingParts((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+        setPendingCostPriceUpdates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(id);
+          return newMap;
+        });
+      }
+    },
+    [parts]
+  );
+
+  // Debounced handle cost price change
+  const handleCostPriceChange = useCallback(
+    (id: number, cost_price: string) => {
+      // Update local state immediately for responsive UI
+      setParts((prev) =>
+        prev.map((p) => {
+          const costPriceNum = parseFloat(cost_price) || 0;
+          const salePriceNum = costPriceNum * 1.2;
+          const sale_price = salePriceNum.toFixed(2);
+
+          if (
+            p.part_number === parts.find((part) => part.id === id)?.part_number
+          ) {
+            const totalCost = p.requested_quantity * costPriceNum;
+            return {
+              ...p,
+              cost_price,
+              sale_price,
+              total_cost: totalCost,
+            };
+          }
+          return p;
+        })
       );
-    } catch (error) {
-      console.error("Error updating cost price:", error);
-      toast.error("خطا در بروزرسانی قیمت");
-    } finally {
-      setUpdatingParts((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-    }
-  };
+
+      // Store pending update
+      setPendingCostPriceUpdates((prev) => new Map(prev).set(id, cost_price));
+
+      // Clear existing timer for this part
+      const existingTimer = costPriceDebounceTimers.current.get(id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      // Set new timer for debounced update
+      const timer = setTimeout(() => {
+        executeCostPriceUpdate(id, cost_price);
+        costPriceDebounceTimers.current.delete(id);
+      }, 800); // 800ms debounce delay
+
+      costPriceDebounceTimers.current.set(id, timer);
+    },
+    [executeCostPriceUpdate, parts]
+  );
+
+  // Handle cost price blur (immediate update)
+  const handleCostPriceBlur = useCallback(
+    (id: number, cost_price: string) => {
+      // Clear any pending debounced update
+      const existingTimer = costPriceDebounceTimers.current.get(id);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        costPriceDebounceTimers.current.delete(id);
+      }
+
+      // Execute immediate update
+      executeCostPriceUpdate(id, cost_price);
+    },
+    [executeCostPriceUpdate]
+  );
 
   // Bulk operations
   const handleBulkSetQuantity = (quantity: number) => {
@@ -942,12 +1011,25 @@ export default function PriorityActionsPage() {
                           onChange={(e) =>
                             handleCostPriceChange(part.id, e.target.value)
                           }
+                          onBlur={(e) => {
+                            // Only update if there's a pending change
+                            if (pendingCostPriceUpdates.has(part.id)) {
+                              handleCostPriceBlur(part.id, e.target.value);
+                            }
+                          }}
                           className="w-24 text-center"
                           disabled={isUpdatingPart}
                         />
                         {isUpdatingPart && (
                           <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground" />
                         )}
+                        {pendingCostPriceUpdates.has(part.id) &&
+                          !isUpdatingPart && (
+                            <div
+                              className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"
+                              title="تغییر در انتظار بروزرسانی"
+                            />
+                          )}
                       </div>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">

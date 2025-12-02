@@ -20,9 +20,9 @@ export const ExpenseTrendChart = ({ data }: ExpenseTrendChartProps) => {
     return (
       <div className="flex flex-col items-center justify-center h-48 sm:h-64 text-muted-foreground">
         <div className="text-center">
-          <p>داده‌ای برای نمایش وجود ندارد</p>
+          <p>معلوماتی برای نمایش وجود ندارد</p>
           <p className="text-xs mt-1">
-            اطلاعات مصارف در بازه انتخاب شده یافت نشد
+            اطلاعات بر اساس این تاریخ موجود نمیباشد{" "}
           </p>
         </div>
       </div>

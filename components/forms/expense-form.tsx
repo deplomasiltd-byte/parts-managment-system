@@ -32,19 +32,35 @@ import {
 import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 
-const formSchema = z.object({
-  title: z.string().min(1, "عنوان لازم است"),
-  description: z.string().optional(),
-  amount: z.number().positive("مقدار باید مثبت باشد"),
-  category: z.string().min(1, "دسته‌بندی لازم است"),
-  expenseDate: z.string().min(1, "تاریخ مصرف لازم است"),
-  receiptNumber: z.string().optional(),
-  vendor: z.string().optional(),
-});
+const expenseFormSchema = z
+  .object({
+    title: z.string().min(1, "عنوان لازم است"),
+    description: z.string().optional(),
+    amount: z.number().positive("مقدار باید مثبت باشد"),
+    currency: z.string().min(1, "واحد پولی لازم است"),
+    category: z.string().min(1, "دسته‌بندی لازم است"),
+    expenseDate: z.string().min(1, "تاریخ مصرف لازم است"),
+    receiptNumber: z.string().optional(),
+    vendor: z.string().optional(),
+  })
+  .strict()
+  .transform((data) => ({
+    ...data,
+    currency: data.currency || "USD",
+  }));
 
-export type ExpenseFormData = z.infer<typeof formSchema>;
+type ExpenseFormValues = {
+  title: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  category: string;
+  expenseDate: string;
+  receiptNumber?: string;
+  vendor?: string;
+};
 
 interface ExpenseFormProps {
   expense?: {
@@ -52,6 +68,7 @@ interface ExpenseFormProps {
     title: string;
     description?: string;
     amount: number;
+    currency: string;
     category: string;
     expenseDate: string;
     receiptNumber?: string;
@@ -86,12 +103,13 @@ export function ExpenseForm({
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const form = useForm<ExpenseFormData>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<ExpenseFormValues>({
+    resolver: zodResolver(expenseFormSchema),
     defaultValues: {
       title: expense?.title || "",
       description: expense?.description || "",
       amount: expense?.amount || 0,
+      currency: expense?.currency || "USD",
       category: expense?.category || "",
       expenseDate: expense?.expenseDate
         ? new Date(expense.expenseDate).toISOString().split("T")[0]
@@ -101,7 +119,7 @@ export function ExpenseForm({
     },
   });
 
-  async function handleSubmit(values: ExpenseFormData) {
+  async function onFormSubmit(values: ExpenseFormValues): Promise<void> {
     setIsLoading(true);
 
     try {
@@ -183,7 +201,7 @@ export function ExpenseForm({
         <CardContent>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(handleSubmit)}
+              onSubmit={form.handleSubmit(onFormSubmit)}
               className="space-y-6"
             >
               <div className="grid gap-4">
@@ -219,9 +237,31 @@ export function ExpenseForm({
                             step="0.01"
                             placeholder="0.00"
                             {...field}
-                            onChange={(e) =>
+                            onChange={(
+                              e: React.ChangeEvent<HTMLInputElement>
+                            ) =>
                               field.onChange(parseFloat(e.target.value) || 0)
                             }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <FormField
+                    control={form.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>واحد پولی *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="مثال: USD, EUR, AFN"
+                            {...field}
+                            maxLength={3}
                           />
                         </FormControl>
                         <FormMessage />

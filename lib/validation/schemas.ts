@@ -30,3 +30,9 @@ export const addBulkPaymentSchema = z.object({
   note: z.string().optional(),
   receivedBy: z.string().optional().nullable(),
 });
+
+export const createRefundSchema = z.object({
+  saleId: z.number().int().positive(),
+  quantity: z.number().int().positive(),
+  reason: z.string().optional(),
+});

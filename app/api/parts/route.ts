@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
+    const active = searchParams.get("active");
     const limit = parseInt(searchParams.get("limit") || "100");
     const page = parseInt(searchParams.get("page") || "1");
 
@@ -25,10 +26,16 @@ export async function GET(request: NextRequest) {
         )
       );
     }
-    whereConditions.push(eq(parts.active, true));
+    // Only filter by active if explicitly specified
+    if (active === "true") {
+      whereConditions.push(eq(parts.active, true));
+    } else if (active === "false") {
+      whereConditions.push(eq(parts.active, false));
+    }
+    // If no active filter is specified, show all parts (both active and inactive)
 
-    // Parts query using currentStock column directly
-    const partsData = await db.execute(sql`
+    // Build dynamic SQL query based on filters
+    let query = sql`
       SELECT
         p.id,
         p.part_number AS "partNumber",
@@ -41,11 +48,24 @@ export async function GET(request: NextRequest) {
         p.created_at AS "createdAt",
         p.current_stock AS "currentStock"
       FROM parts p
-      WHERE p.active = true
-      ${search ? sql`AND (${or(like(parts.partNumber, `%${search}%`), like(parts.name, `%${search}%`))})` : sql``}
-      ORDER BY p.part_number
-      LIMIT ${limit} OFFSET ${offset}
-    `);
+      WHERE 1=1
+    `;
+
+    // Add active filter if specified
+    if (active === "true") {
+      query = sql`${query} AND p.active = true`;
+    } else if (active === "false") {
+      query = sql`${query} AND p.active = false`;
+    }
+
+    // Add search filter if specified
+    if (search) {
+      query = sql`${query} AND (${or(like(parts.partNumber, `%${search}%`), like(parts.name, `%${search}%`))})`;
+    }
+
+    query = sql`${query} ORDER BY p.part_number LIMIT ${limit} OFFSET ${offset}`;
+
+    const partsData = await db.execute(query);
 
     // Get total count
     const countResult = await db

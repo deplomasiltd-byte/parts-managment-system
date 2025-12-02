@@ -63,6 +63,7 @@ interface Expense {
   title: string;
   description?: string;
   amount: number;
+  currency?: string;
   category: string;
   expenseDate: string;
   receiptNumber?: string;
@@ -157,6 +158,7 @@ export function ExpensesTable() {
   const [summaryData, setSummaryData] = useState({
     totalAmount: 0,
     totalExpenses: 0,
+    currencyBreakdown: {} as Record<string, number>,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -184,7 +186,19 @@ export function ExpensesTable() {
       if (result.success) {
         setExpensesData(result.data || []);
         setPaginationData(result.pagination);
-        setSummaryData(result.summary);
+
+        // Calculate currency breakdown from the data
+        const currencyBreakdown: Record<string, number> = {};
+        result.data?.forEach((expense: Expense) => {
+          const currency = expense.currency || "USD";
+          currencyBreakdown[currency] =
+            (currencyBreakdown[currency] || 0) + Number(expense.amount);
+        });
+
+        setSummaryData({
+          ...result.summary,
+          currencyBreakdown,
+        });
       } else {
         toast.error("دریافت مصارف ناموفق بود");
       }
@@ -247,11 +261,16 @@ export function ExpensesTable() {
   };
 
   // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "AFN",
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = "USD") => {
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: currency,
+      }).format(amount);
+    } catch (error) {
+      // Fallback if currency code is invalid
+      return `${amount.toFixed(2)} ${currency}`;
+    }
   };
 
   // Format date
@@ -284,7 +303,10 @@ export function ExpensesTable() {
               </span>
             </div>
             <div className="text-sm font-semibold text-green-600">
-              {formatCurrency(expense.amount)}
+              {formatCurrency(expense.amount, expense.currency || "USD")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              واحد: {expense.currency || "USD"}
             </div>
           </div>
         );
@@ -346,9 +368,13 @@ export function ExpensesTable() {
       header: "مقدار",
       cell: ({ row }) => {
         const amount = row.getValue("amount") as number;
+        const currency = row.original.currency || "USD";
         return (
-          <div className="text-left font-mono font-semibold text-green-600">
-            {formatCurrency(amount)}
+          <div className="text-left">
+            <div className="font-mono font-semibold text-green-600">
+              {formatCurrency(amount, currency)}
+            </div>
+            <div className="text-xs text-muted-foreground">{currency}</div>
           </div>
         );
       },
@@ -481,13 +507,27 @@ export function ExpensesTable() {
 
         <div className="bg-card border rounded-lg p-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-muted-foreground">
                 مجموع مبلغ
               </p>
-              <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(summaryData.totalAmount)}
-              </p>
+              <div className="space-y-1">
+                {Object.entries(summaryData.currencyBreakdown).map(
+                  ([currency, amount]) => (
+                    <p
+                      key={currency}
+                      className="text-lg font-bold text-green-600"
+                    >
+                      {formatCurrency(amount, currency)}
+                    </p>
+                  )
+                )}
+                {Object.keys(summaryData.currencyBreakdown).length === 0 && (
+                  <p className="text-lg font-bold text-green-600">
+                    {formatCurrency(summaryData.totalAmount)}
+                  </p>
+                )}
+              </div>
             </div>
             <div className="p-2 rounded-full bg-green-100 dark:bg-green-950">
               <DollarSign className="h-5 w-5 text-green-600" />
@@ -679,7 +719,14 @@ export function ExpensesTable() {
             </div>
             <div className="p-6">
               <ExpenseForm
-                expense={editingExpense}
+                expense={
+                  editingExpense
+                    ? {
+                        ...editingExpense,
+                        currency: editingExpense.currency || "USD",
+                      }
+                    : undefined
+                }
                 onSubmit={() => {
                   fetchExpenses();
                   setIsEditFormOpen(false);

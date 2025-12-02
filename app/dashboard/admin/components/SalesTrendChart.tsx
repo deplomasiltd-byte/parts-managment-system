@@ -17,8 +17,10 @@ export const SalesTrendChart = ({ data }: SalesTrendChartProps) => {
     return (
       <div className="flex flex-col items-center justify-center h-48 sm:h-64 text-muted-foreground">
         <BarChart3 className="h-12 w-12 mb-2 opacity-50" />
-        <p>داده‌ای برای نمایش وجود ندارد</p>
-        <p className="text-xs mt-1">اطلاعات فروش در بازه انتخاب شده یافت نشد</p>
+        <p>هیچ معلومات برای نمایش وجود ندارد.</p>
+        <p className="text-xs mt-1">
+          معلومات فروش در محدوده انتخاب شده یافت نشد.
+        </p>
       </div>
     );
   }

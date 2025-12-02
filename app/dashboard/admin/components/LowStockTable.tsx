@@ -65,7 +65,7 @@ export const LowStockTable = ({ items }: LowStockTableProps) => {
                   </p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground text-xs">وضعیت:</span>
+                  <span className="text-muted-foreground text-xs">حالت:</span>
                   <Badge
                     variant={
                       item.current_stock === 0 ? "destructive" : "outline"

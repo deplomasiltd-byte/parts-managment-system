@@ -21,22 +21,45 @@ export async function GET(
       );
     }
 
-    const expenseData = await db.execute(sql`
-      SELECT
-        e.id,
-        e.title,
-        e.description,
-        e.amount,
-        e.category,
-        e.expense_date AS "expenseDate",
-        e.receipt_number AS "receiptNumber",
-        e.vendor,
-        e.created_by AS "createdBy",
-        e.created_at AS "createdAt",
-        e.updated_at AS "updatedAt"
-      FROM expenses e
-      WHERE e.id = ${id}
-    `);
+    let expenseData;
+    try {
+      // Try to select with currency column
+      expenseData = await db.execute(sql`
+        SELECT
+          e.id,
+          e.title,
+          e.description,
+          e.amount,
+          e.currency,
+          e.category,
+          e.expense_date AS "expenseDate",
+          e.receipt_number AS "receiptNumber",
+          e.vendor,
+          e.created_by AS "createdBy",
+          e.created_at AS "createdAt",
+          e.updated_at AS "updatedAt"
+        FROM expenses e
+        WHERE e.id = ${id}
+      `);
+    } catch (error) {
+      // If currency column doesn't exist, select without it
+      expenseData = await db.execute(sql`
+        SELECT
+          e.id,
+          e.title,
+          e.description,
+          e.amount,
+          e.category,
+          e.expense_date AS "expenseDate",
+          e.receipt_number AS "receiptNumber",
+          e.vendor,
+          e.created_by AS "createdBy",
+          e.created_at AS "createdAt",
+          e.updated_at AS "updatedAt"
+        FROM expenses e
+        WHERE e.id = ${id}
+      `);
+    }
 
     const expense =
       expenseData.rows && expenseData.rows.length > 0
@@ -84,6 +107,7 @@ export async function PUT(
       title,
       description,
       amount,
+      currency,
       category,
       expenseDate,
       receiptNumber,
@@ -104,19 +128,26 @@ export async function PUT(
       );
     }
 
-    // Update the expense
+    // Update the expense (handle currency conditionally)
+    const updateValues: any = {
+      ...(title && { title }),
+      ...(description !== undefined && { description }),
+      ...(amount !== undefined && { amount }),
+      ...(category !== undefined && { category }),
+      ...(expenseDate && { expenseDate: new Date(expenseDate) }),
+      ...(receiptNumber !== undefined && { receiptNumber }),
+      ...(vendor !== undefined && { vendor }),
+      updatedAt: new Date(),
+    };
+
+    // Only add currency if it exists in the input
+    if (currency !== undefined) {
+      updateValues.currency = currency;
+    }
+
     const updatedExpense = await db
       .update(expenses)
-      .set({
-        ...(title && { title }),
-        ...(description !== undefined && { description }),
-        ...(amount !== undefined && { amount }),
-        ...(category !== undefined && { category }),
-        ...(expenseDate && { expenseDate: new Date(expenseDate) }),
-        ...(receiptNumber !== undefined && { receiptNumber }),
-        ...(vendor !== undefined && { vendor }),
-        updatedAt: new Date(),
-      })
+      .set(updateValues)
       .where(eq(expenses.id, id))
       .returning();
 

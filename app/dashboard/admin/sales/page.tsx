@@ -57,6 +57,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Filter,
+  ArrowDownLeft,
 } from "lucide-react";
 import Loader from "@/components/loader";
 
@@ -198,6 +199,27 @@ export default function AdminSalesPage() {
   const [paymentNote, setPaymentNote] = useState("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isProcessingBulkPayment, setIsProcessingBulkPayment] = useState(false);
+
+  // Refund dialog state
+  const [refundDialog, setRefundDialog] = useState<{
+    isOpen: boolean;
+    saleId: number | null;
+    customerName: string;
+    partName: string;
+    totalQuantity: number;
+    totalAmount: string;
+  }>({
+    isOpen: false,
+    saleId: null,
+    customerName: "",
+    partName: "",
+    totalQuantity: 0,
+    totalAmount: "0",
+  });
+
+  const [refundQuantity, setRefundQuantity] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -347,6 +369,15 @@ export default function AdminSalesPage() {
                 پرداخت
               </Button>
             )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openRefundDialog(row.original)}
+            className="border-red-500 text-red-600 hover:bg-red-50"
+          >
+            <ArrowDownLeft className="ml-2 h-3 w-3" />
+            برگشت
+          </Button>
         </div>
       ),
     },
@@ -394,6 +425,18 @@ export default function AdminSalesPage() {
       totalOutstanding: customer.totalOutstanding,
     });
     setBulkPaymentAmount(customer.totalOutstanding.toString());
+  };
+
+  const openRefundDialog = (record: SaleRecord) => {
+    setRefundDialog({
+      isOpen: true,
+      saleId: record.id,
+      customerName: record.customerName,
+      partName: record.partName,
+      totalQuantity: record.quantity,
+      totalAmount: record.totalAmount,
+    });
+    setRefundQuantity(record.quantity.toString());
   };
 
   const handleAddPayment = async () => {
@@ -511,6 +554,63 @@ export default function AdminSalesPage() {
     }
   };
 
+  const handleRefund = async () => {
+    if (!refundDialog.saleId || !refundQuantity) return;
+
+    const quantity = parseInt(refundQuantity);
+    if (quantity <= 0) {
+      alert("تعداد برگشتی باید بیشتر از صفر باشد");
+      return;
+    }
+
+    if (quantity > refundDialog.totalQuantity) {
+      alert("تعداد برگشتی نمی‌تواند بیشتر از تعداد اصلی باشد");
+      return;
+    }
+
+    setIsProcessingRefund(true);
+    try {
+      const refundData = {
+        saleId: refundDialog.saleId,
+        quantity,
+        reason: refundReason || undefined,
+      };
+
+      const response = await fetch("/api/refunds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(refundData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Refund failed");
+      }
+
+      const result = await response.json();
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+
+      setRefundDialog({
+        isOpen: false,
+        saleId: null,
+        customerName: "",
+        partName: "",
+        totalQuantity: 0,
+        totalAmount: "0",
+      });
+      setRefundQuantity("");
+      setRefundReason("");
+
+      alert(
+        `مسترد با موفقیت انجام شد. ${quantity} قطعه به انبار بازگردانده شد.`
+      );
+    } catch (error) {
+      console.error("Error processing refund:", error);
+      alert("خطا در انجام مسترد");
+    } finally {
+      setIsProcessingRefund(false);
+    }
+  };
+
   // Filter records for customer summary
   const filteredRecords =
     salesData?.data?.filter((record) => {
@@ -586,6 +686,10 @@ export default function AdminSalesPage() {
                   ثبت پرداخت
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={() => openRefundDialog(record)}>
+                <ArrowDownLeft className="ml-2 h-4 w-4" />
+                برگشت
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1356,7 +1460,7 @@ export default function AdminSalesPage() {
         <DialogContent className="max-w-md border-mechanical bg-background">
           <DialogHeader>
             <DialogTitle className="text-center text-lg font-bold bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              پرداخت انبوه - {bulkPaymentDialog.customerName}
+              پرداخت یکجای - {bulkPaymentDialog.customerName}
             </DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-4">
@@ -1369,7 +1473,7 @@ export default function AdminSalesPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">مجموع بدهی:</span>
+                      <span className="text-muted-foreground">مجموع قرضی:</span>
                       <span className="font-bold text-amber-600">
                         {bulkPaymentDialog.totalOutstanding.toLocaleString()}{" "}
                         افغانی
@@ -1394,7 +1498,7 @@ export default function AdminSalesPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     می‌توانید مبلغی کمتر یا بیشتر از بدهی پرداخت کنید. مبلغ
-                    اضافی برگشت داده می‌شود.
+                    اضافی مسترد داده می‌شود.
                   </p>
                 </div>
 
@@ -1443,6 +1547,126 @@ export default function AdminSalesPage() {
                       <>
                         <CreditCard className="ml-2 h-4 w-4" />
                         ثبت پرداخت انبوه
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {/* Refund Dialog */}
+      <Dialog
+        open={refundDialog.isOpen}
+        onOpenChange={(open) =>
+          setRefundDialog((prev) => ({ ...prev, isOpen: open }))
+        }
+      >
+        <DialogContent className="max-w-md border-mechanical bg-background">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg font-bold bg-linear-to-r from-red-600 to-red-500 bg-clip-text text-transparent">
+              صفحه مسترد پرزه
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-4">
+                <div className=" p-3 rounded-lg border border-red-200">
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">مشتری:</span>
+                      <span className="font-medium text-foreground">
+                        {refundDialog.customerName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">قطعه:</span>
+                      <span className="font-medium text-foreground">
+                        {refundDialog.partName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">تعداد اصلی:</span>
+                      <span className="font-bold text-red-600">
+                        {refundDialog.totalQuantity} قطعه
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">مبلغ کل:</span>
+                      <span className="font-bold text-red-600">
+                        {parseFloat(refundDialog.totalAmount).toLocaleString()}{" "}
+                        افغانی
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    تعداد که میخواهید مسترد کنید
+                  </label>
+                  <Input
+                    type="number"
+                    value={refundQuantity}
+                    onChange={(e) => setRefundQuantity(e.target.value)}
+                    placeholder="تعداد را وارد کنید"
+                    min="1"
+                    max={refundDialog.totalQuantity}
+                    className="text-right border-border focus:border-red-500 focus:ring-red-500/20"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    حداکثر {refundDialog.totalQuantity} قطعه
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    دلیل مسترد (اختیاری)
+                  </label>
+                  <Input
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    placeholder="علت مسترد پرزه"
+                    className="text-right border-border focus:border-red-500 focus:ring-red-500/20"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setRefundDialog({
+                        isOpen: false,
+                        saleId: null,
+                        customerName: "",
+                        partName: "",
+                        totalQuantity: 0,
+                        totalAmount: "0",
+                      })
+                    }
+                    className="flex-1 border-border text-foreground hover:bg-accent hover:text-accent-foreground"
+                  >
+                    انصراف
+                  </Button>
+                  <Button
+                    onClick={handleRefund}
+                    disabled={
+                      !refundQuantity ||
+                      parseInt(refundQuantity) <= 0 ||
+                      parseInt(refundQuantity) > refundDialog.totalQuantity ||
+                      isProcessingRefund
+                    }
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white shadow-md"
+                  >
+                    {isProcessingRefund ? (
+                      <>
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        در حال پردازش...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowDownLeft className="ml-2 h-4 w-4" />
+                        تایید برگشت
                       </>
                     )}
                   </Button>

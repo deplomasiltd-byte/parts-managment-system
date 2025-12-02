@@ -4,7 +4,7 @@
 import { PartsTable } from "@/components/parts/parts-table";
 import { CreatePartDialog } from "@/components/parts/create-part-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, Upload, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -59,31 +59,13 @@ export default function PartsPage() {
           </Button>
 
           {isAdmin && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-border text-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                وارد کردن
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-border text-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                خروجی گرفتن
-              </Button>
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                ایجاد قطعه
-              </Button>
-            </>
+            <Button
+              onClick={() => setIsCreateDialogOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              ایجاد پرزه
+            </Button>
           )}
         </div>
       </div>

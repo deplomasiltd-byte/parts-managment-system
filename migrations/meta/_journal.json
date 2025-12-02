@@ -57,6 +57,13 @@
       "when": 1763549927196,
       "tag": "0007_fair_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1764505316101,
+      "tag": "0008_colossal_riptide",
+      "breakpoints": true
     }
   ]
 }

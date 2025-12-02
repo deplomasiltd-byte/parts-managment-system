@@ -108,7 +108,7 @@ export const DateRangePicker = ({
               onClick={() => setIsOpen(false)}
               className="text-xs"
             >
-              لغو
+              انصراف
             </Button>
             <Button
               size="sm"

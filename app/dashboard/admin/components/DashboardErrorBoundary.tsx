@@ -81,13 +81,13 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
             <AlertTriangle className="h-16 w-16 text-red-500" />
           </div>
           <CardTitle className="text-xl font-bold text-red-600">
-            خطا در بارگذاری داشبورد
+            خطا در بارگذاری دشبورد
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center space-y-2">
             <p className="text-gray-600 dark:text-gray-400">
-              متأسفانه خطایی در بارگذاری داشبورد رخ داده است.
+              متأسفانه خطایی در بارگذاری دشبورد رخ داده است.
             </p>
             {error && (
               <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg text-sm text-left">
@@ -116,8 +116,8 @@ function DefaultErrorFallback({ error, resetError }: ErrorFallbackProps) {
           </div>
 
           <div className="text-center text-sm text-gray-500">
-            اگر مشکل ادامه یافت، لطفاً صفحه را مجدداً بارگذاری کنید یا با
-            پشتیبانی تماس بگیرید.
+            اگر مشکل ادامه یافت، لطفاً صفحه را مجدداً بارگذاری کنید یا با انجینر
+            شعیب تماس بگیرید.
           </div>
         </CardContent>
       </Card>

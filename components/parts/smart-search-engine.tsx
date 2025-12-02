@@ -30,9 +30,13 @@ interface SearchResult {
 
 interface SmartSearchEngineProps {
   onPartSelect?: (part: Part) => void;
+  refreshTrigger?: number;
 }
 
-export function SmartSearchEngine({ onPartSelect }: SmartSearchEngineProps) {
+export function SmartSearchEngine({
+  onPartSelect,
+  refreshTrigger,
+}: SmartSearchEngineProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -48,6 +52,17 @@ export function SmartSearchEngine({ onPartSelect }: SmartSearchEngineProps) {
     loadModel();
     loadPartsData();
   }, []);
+
+  // Handle refresh trigger
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      console.log(
+        "🔄 Refreshing SmartSearchEngine data due to trigger:",
+        refreshTrigger
+      );
+      loadPartsData();
+    }
+  }, [refreshTrigger]);
 
   const loadModel = async () => {
     try {
@@ -434,13 +449,13 @@ export function SmartSearchEngine({ onPartSelect }: SmartSearchEngineProps) {
 
                     {/* Enhanced Stock Warning Display */}
                     {result.part.currentStock <= result.part.minStock ? (
-                      <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded">
-                        <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                      <div className="flex items-center gap-2 p-2 dark:bg-red-800 border border-red-200 rounded">
+                        <AlertTriangle className="h-4 w-4 dark;text-red-100 shrink-0" />
                         <div className="text-sm">
-                          <span className="text-red-700 font-medium">
+                          <span className="dar:text-red-100 font-medium">
                             ⚠️ موجودی ناکافی
                           </span>
-                          <div className="text-xs text-red-600 mt-1">
+                          <div className="text-xs dark:text-red-000 mt-1">
                             <span>
                               حداقل مورد نیاز: {result.part.minStock} عدد
                             </span>

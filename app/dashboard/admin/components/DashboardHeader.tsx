@@ -16,10 +16,10 @@ export const DashboardHeader = ({
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-          داشبورد مدیریت
+          دشبورد مدیریت
         </h1>
         <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-          نمای کلی جامع از عملکرد کسب و کار شما
+          نمای کامل از عملکرد تجارت شما
         </p>
       </div>
       <div className="flex items-center gap-3 w-full sm:w-auto">

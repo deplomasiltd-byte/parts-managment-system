@@ -36,7 +36,7 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                مجموع درآمد
+                درآمد مجموعی{" "}
               </p>
               <p className="text-xl font-bold text-blue-600">
                 {formatCurrency(totalRevenue)}
@@ -68,7 +68,7 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">
-                سود ناخالص
+                مفاد خالص{" "}
               </p>
               <p
                 className={`text-xl font-bold ${grossProfit >= 0 ? "text-green-600" : "text-red-600"}`}
@@ -158,7 +158,7 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
                 title={`سود ناخالص: ${formatCurrency(grossProfit)}`}
               />
               <div className="mt-2 text-center">
-                <div className="text-sm font-medium">سود ناخالص</div>
+                <div className="text-sm font-medium">مفاد ناخالص</div>
                 <div
                   className={`text-xs ${grossProfit >= 0 ? "text-green-600" : "text-red-600"}`}
                 >
@@ -175,10 +175,10 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
                   height: `${(Math.abs(netProfit) / maxValue) * 200}px`,
                   width: "60px",
                 }}
-                title={`سود خالص: ${formatCurrency(netProfit)}`}
+                title={`مفاد خالص: ${formatCurrency(netProfit)}`}
               />
               <div className="mt-2 text-center">
-                <div className="text-sm font-medium">سود خالص</div>
+                <div className="text-sm font-medium">مفاد خالص</div>
                 <div
                   className={`text-xs ${netProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}
                 >
@@ -201,7 +201,7 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
 
       {/* Profit Analysis Details */}
       <div className="bg-card border rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">جزئیات تحلیل سود</h3>
+        <h3 className="text-lg font-semibold mb-4">جزئیات تحلیل مفاد</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
@@ -226,7 +226,7 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm">سود به ازای هر افغانی درآمد</span>
+              <span className="text-sm">مفاد بر اساس هر افغانی درآمد</span>
               <span className="font-medium">
                 {totalRevenue > 0 ? (grossProfit / totalRevenue).toFixed(3) : 0}
               </span>
@@ -237,21 +237,21 @@ export const ProfitAnalysisChart = ({ data }: ProfitAnalysisChartProps) => {
             <div
               className={`p-4 rounded-lg ${profitMargin >= 0 ? "bg-green-50 dark:bg-green-950" : "bg-red-50 dark:bg-red-950"}`}
             >
-              <h4 className="font-medium mb-2">وضعیت سودآوری</h4>
+              <h4 className="font-medium mb-2">حالت مفادآوری</h4>
               <p
                 className={`text-sm ${profitMargin >= 0 ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}`}
               >
                 {profitMargin >= 0
-                  ? `سودآور با نرخ ${profitMargin.toFixed(1)}%`
+                  ? `مفادآور با نرخ ${profitMargin.toFixed(1)}%`
                   : `زیان‌ده با نرخ ${Math.abs(profitMargin).toFixed(1)}%`}
               </p>
             </div>
 
             <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-950">
-              <h4 className="font-medium mb-2">توصیه</h4>
+              <h4 className="font-medium mb-2">توضیح</h4>
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 {profitMargin < 10
-                  ? "نیاز به کاهش هزینه‌ها یا افزایش درآمد"
+                  ? "ضرورت به کاهش هزینه‌ها یا افزایش درآمد"
                   : profitMargin > 30
                     ? "عملکرد عالی، حفظ روند فعلی"
                     : "عملکرد مناسب، فرصت بهبود وجود دارد"}

@@ -200,11 +200,33 @@ export const expenses = pgTable("expenses", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD"), // Currency code (USD, EUR, AFN, etc.)
   category: varchar("category", { length: 100 }).notNull(),
   expenseDate: timestamp("expense_date").defaultNow(),
   receiptNumber: varchar("receipt_number", { length: 100 }),
   vendor: varchar("vendor", { length: 255 }),
   createdBy: text("created_by").references(() => user.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// --- جدول برگشتی‌ها (ریفند) ---
+export const refunds = pgTable("refunds", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id")
+    .references(() => sales.id)
+    .notNull(),
+  partId: integer("part_id")
+    .references(() => parts.id)
+    .notNull(),
+  customerId: integer("customer_id")
+    .references(() => customers.id)
+    .notNull(),
+  quantity: integer("quantity").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  reason: text("reason"),
+  refundDate: timestamp("refund_date").defaultNow(),
+  processedBy: text("processed_by").references(() => user.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -233,4 +255,5 @@ export const schema = {
   inventory,
   searchIndex,
   expenses,
+  refunds,
 };

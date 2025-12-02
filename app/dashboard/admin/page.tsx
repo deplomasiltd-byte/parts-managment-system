@@ -522,7 +522,7 @@ const getSalesCardInfo = (dateRange: DateRange) => {
 
   // Default custom range
   return {
-    title: "فروش در بازه انتخابی",
+    title: "فروش بر اساس دوره انتخاب شده",
     dateText: `${format(dateRange.from, "yyyy/MM/dd", { locale: faIR })} - ${format(dateRange.to, "yyyy/MM/dd", { locale: faIR })}`,
   };
 };
@@ -541,8 +541,8 @@ const SalesTrendChart = ({ data }: { data: SalesTrend[] }) => {
     return (
       <div className="flex flex-col items-center justify-center h-48 sm:h-64 text-muted-foreground">
         <BarChart3 className="h-12 w-12 mb-2 opacity-50" />
-        <p>داده‌ای برای نمایش وجود ندارد</p>
-        <p className="text-xs mt-1">اطلاعات فروش در بازه انتخاب شده یافت نشد</p>
+        <p>هیچ اطلاعاتی موجود نمیباشد</p>
+        <p className="text-xs mt-1">اطلاعات فروش بر اساس تاریخ </p>
       </div>
     );
   }
@@ -636,7 +636,7 @@ const PaymentStatusChart = ({ data }: { data: PaymentStatus }) => {
   if (total === 0)
     return (
       <div className="text-center text-muted-foreground">
-        داده‌ای موجود نیست
+        هیچ اطلاعاتی موجود نمیباشد
       </div>
     );
 
@@ -692,7 +692,7 @@ const PaymentStatusChart = ({ data }: { data: PaymentStatus }) => {
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded"></div>
-            <span>پرداخت کامل</span>
+            <span>تعداد قرض های کامل جمع آوری شده </span>
           </div>
           <span className="font-medium">
             {data.fullyPaid.toLocaleString("fa-IR")}
@@ -701,7 +701,7 @@ const PaymentStatusChart = ({ data }: { data: PaymentStatus }) => {
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-amber-500 rounded"></div>
-            <span>پرداخت جزئی</span>
+            <span>تعداد قرض های نیمه جمع آوری شده</span>
           </div>
           <span className="font-medium">
             {data.partiallyPaid.toLocaleString("fa-IR")}
@@ -710,7 +710,7 @@ const PaymentStatusChart = ({ data }: { data: PaymentStatus }) => {
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-1 sm:gap-2">
             <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded"></div>
-            <span>پرداخت نشده</span>
+            <span>تعداد قرض های کامل باقی</span>
           </div>
           <span className="font-medium">
             {data.notPaid.toLocaleString("fa-IR")}
@@ -729,8 +729,10 @@ const ExpenseChart = ({ data }: { data: ExpenseData }) => {
     return (
       <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
         <Receipt className="h-12 w-12 mb-2 opacity-50" />
-        <p>اطلاعات مصارف موجود نیست</p>
-        <p className="text-xs mt-1">مصارف در بازه انتخاب شده یافت نشد</p>
+        <p>اطلاعاتی موجود نمیباشد</p>
+        <p className="text-xs mt-1">
+          هیچ اطلاعاتی بر اساس تاریخ انتخاب شده شما موجود نمیباشد
+        </p>
       </div>
     );
   }
@@ -1010,7 +1012,7 @@ export default function AdminDashboard() {
             داشبورد مدیریت
           </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            نمای کلی جامع از عملکرد کسب و کار شما
+            نمای کامل از تجارت شما
           </p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -1039,9 +1041,11 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-3">
           <CalendarIcon className="h-5 w-5 text-primary" />
           <div>
-            <h3 className="font-medium text-sm sm:text-base">فیلتر زمانی</h3>
+            <h3 className="font-medium text-sm sm:text-base">
+              قسمت فلتر بر اساس تاریخ
+            </h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              انتخاب بازه زمانی برای نمایش اطلاعات
+              این قسمت در حالت عادی نتایج یک ماه را نشان میدهد{" "}
             </p>
           </div>
         </div>
@@ -1056,7 +1060,7 @@ export default function AdminDashboard() {
         <Card className="bg-mechanical border-mechanical shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium">
-              مجموع فروش
+              مجموع فروشات پرزه
             </CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
@@ -1073,7 +1077,7 @@ export default function AdminDashboard() {
         <Card className="bg-mechanical border-mechanical shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium">
-              پرداختی‌های جمع‌آوری شده
+              مجموع قرض های جمع آوری شده
             </CardTitle>
             <CreditCard className="h-4 w-4 text-green-600" />
           </CardHeader>
@@ -1082,7 +1086,8 @@ export default function AdminDashboard() {
               {stats?.totalPaid?.toLocaleString("fa-IR") || 0} افغانی
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats?.paymentCompletionRate?.toFixed(1) || 0}% نرخ تکمیل پرداخت
+              مجموع فرض ها بر اساس فیصد{" "}
+              {stats?.paymentCompletionRate?.toFixed(1) || 0}
             </p>
           </CardContent>
         </Card>
@@ -1090,7 +1095,7 @@ export default function AdminDashboard() {
         <Card className="bg-mechanical border-mechanical shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium">
-              مانده حساب
+              مجموع قرض های باقی مانده
             </CardTitle>
             <AlertTriangle className="h-4 w-4 text-amber-600" />
           </CardHeader>
@@ -1116,7 +1121,7 @@ export default function AdminDashboard() {
               {expenseData?.totalExpenses?.toLocaleString("fa-IR") || 0} افغانی
             </div>
             <p className="text-xs text-muted-foreground">
-              {expenseData?.totalCategories || 0} دسته‌بندی مختلف
+              تعداد دسته ها {expenseData?.totalCategories || 0}
             </p>
           </CardContent>
         </Card>
@@ -1124,7 +1129,7 @@ export default function AdminDashboard() {
         <Card className="bg-mechanical border-mechanical shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium">
-              هشدار کمبود موجودی
+              قسمت هشدار کمبود پرزه ها
             </CardTitle>
             <PackageSearch className="h-4 w-4 text-red-600" />
           </CardHeader>
@@ -1133,7 +1138,7 @@ export default function AdminDashboard() {
               {actualLowStockCount.toLocaleString("fa-IR")}
             </div>
             <p className="text-xs text-muted-foreground">
-              موارد زیر سطح حداقل موجودی
+              در بالا میتوانین تعداد نوع پرزه های کمبود را مشاهده نمایید
             </p>
           </CardContent>
         </Card>
@@ -1147,28 +1152,28 @@ export default function AdminDashboard() {
             className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
           >
             <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4" />
-            نمای کلی
+            تمام بخش ها
           </TabsTrigger>
           <TabsTrigger
             value="expenses"
             className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
           >
             <Receipt className="h-3 w-3 sm:h-4 sm:w-4" />
-            مصارف
+            بخش مصارف{" "}
           </TabsTrigger>
           <TabsTrigger
             value="inventory"
             className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
           >
             <Package className="h-3 w-3 sm:h-4 sm:w-4" />
-            موجودی
+            بخش پرزه
           </TabsTrigger>
           <TabsTrigger
             value="performance"
             className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
           >
             <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-            عملکرد
+            بخش اقدامات
           </TabsTrigger>
         </TabsList>
 
@@ -1179,7 +1184,7 @@ export default function AdminDashboard() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-                  روند فروش
+                  روند فروشات
                   {dateRange.from && dateRange.to && (
                     <span className="text-xs text-muted-foreground">
                       ({format(dateRange.from, "yyyy/MM/dd", { locale: faIR })}{" "}
@@ -1188,14 +1193,15 @@ export default function AdminDashboard() {
                   )}
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  فروش روزانه و جمع‌آوری پرداختی‌ها
+                  قسمت تحلیل و مقایسه فروشات و جمع آوری قرض ها هر ستون نشان
+                  دهنده یک روز میباشد
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
                 {trendLoading ? (
                   <div className="flex items-center justify-center h-48 sm:h-64">
                     <Loader
-                      title="در حال بارگذاری نمودار فروش..."
+                      title="در حال بارگذاری نمودار فروشات..."
                       subtitle="لطفاً منتظر بمانید"
                       size="sm"
                     />
@@ -1206,11 +1212,11 @@ export default function AdminDashboard() {
                     <div className="flex justify-center gap-4 mt-4 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                        فروش
+                        فروشات
                       </div>
                       <div className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-green-500 rounded"></div>
-                        پرداختی‌ها
+                        قرض های جمع آوری شده
                       </div>
                     </div>
                   </>
@@ -1219,7 +1225,7 @@ export default function AdminDashboard() {
                     <BarChart3 className="h-12 w-12 mb-2 opacity-50" />
                     <p>اطلاعات فروشی موجود نیست</p>
                     <p className="text-xs mt-1">
-                      برای بازه انتخاب شده داده‌ای یافت نشد
+                      اطلاعاتی در این تاریخ موجود نمیباشد{" "}
                     </p>
                   </div>
                 )}
@@ -1230,10 +1236,10 @@ export default function AdminDashboard() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
-                  وضعیت پرداخت
+                  وضعیت قرض ها
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  توزیع وضعیت تکمیل پرداخت
+                  توزیع وضعیت تکمیل قرض ها
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1249,7 +1255,7 @@ export default function AdminDashboard() {
                   <PaymentStatusChart data={paymentStatus} />
                 ) : (
                   <div className="flex items-center justify-center h-48 text-muted-foreground">
-                    اطلاعات پرداختی موجود نیست
+                    اطلاعات از قرض ها موجود نیست
                   </div>
                 )}
               </CardContent>
@@ -1272,7 +1278,7 @@ export default function AdminDashboard() {
                   )}
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  مصارف روزانه بر اساس دسته‌بندی
+                  هر ستون نشان دهنده مجموع مصارف ثبت شده در آن روز میباشد
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -1291,7 +1297,7 @@ export default function AdminDashboard() {
                     <Receipt className="h-12 w-12 mb-2 opacity-50" />
                     <p>اطلاعات مصارفی موجود نیست</p>
                     <p className="text-xs mt-1">
-                      برای بازه انتخاب شده داده‌ای یافت نشد
+                      برای دوره انتخاب شده اطلاعاتی یافت نشد
                     </p>
                   </div>
                 )}
@@ -1369,7 +1375,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs sm:text-sm font-medium">
-                  سود ناخالص
+                  مفاد ناخالص
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1381,7 +1387,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center text-xs text-muted-foreground mt-1">
                   <TrendingUp className="h-3 w-3 ml-1" />
-                  حاشیه سود:{" "}
+                  رشد مفاد بر اساس فیصد{" "}
                   {expenseData?.profitAnalysis?.profitMargin?.toFixed(1) || 0}%
                 </div>
               </CardContent>
@@ -1390,7 +1396,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs sm:text-sm font-medium">
-                  سود خالص
+                  مفاد خالص یا پولی که باید موجود باشد{" "}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1402,7 +1408,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center text-xs text-muted-foreground mt-1">
                   <Calculator className="h-3 w-3 ml-1" />
-                  پس از کسر تمام مصارف
+                  پول بالا بعد محاسبه مصارف میباشد{" "}
                 </div>
               </CardContent>
             </Card>
@@ -1410,7 +1416,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs sm:text-sm font-medium">
-                  مجموع قطعات
+                  مجموع تعداد پرزه های ثبت شده در سیستم
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1419,7 +1425,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex items-center text-xs text-muted-foreground mt-1">
                   <Package className="h-3 w-3 ml-1" />
-                  در موجودی
+                  در بالا فقط تعداد انواع پرزها را نشان میدهد{" "}
                 </div>
               </CardContent>
             </Card>
