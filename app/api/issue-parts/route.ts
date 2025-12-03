@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     console.log("Validating request data...");
+    console.log("Received invoiceDate:", invoiceDate);
 
     if (
       !customerName ||
@@ -53,6 +54,64 @@ export async function POST(request: NextRequest) {
       console.log("Validation failed: missing customerName or items");
       return bad("نام مشتری و قطعات الزامی است");
     }
+
+    // Validate and parse invoiceDate
+    let parsedInvoiceDate: Date;
+    if (invoiceDate) {
+      try {
+        // Handle Persian date format (YYYY/MM/DD with Persian numerals)
+        const persianDateRegex = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/;
+        const match = invoiceDate.match(persianDateRegex);
+
+        if (match) {
+          const [, year, month, day] = match;
+          // Convert Persian numerals to English if needed
+          const persianToEnglish = (str: string) => {
+            const persianNumerals = [
+              "۰",
+              "۱",
+              "۲",
+              "۳",
+              "۴",
+              "۵",
+              "۶",
+              "۷",
+              "۸",
+              "۹",
+            ];
+            return str.replace(/[\u06F0-\u06F9]/g, (digit) =>
+              persianNumerals.indexOf(digit).toString()
+            );
+          };
+
+          const engYear = persianToEnglish(year);
+          const engMonth = persianToEnglish(month);
+          const engDay = persianToEnglish(day);
+
+          parsedInvoiceDate = new Date(
+            parseInt(engYear),
+            parseInt(engMonth) - 1,
+            parseInt(engDay)
+          );
+        } else {
+          // Try standard date parsing
+          parsedInvoiceDate = new Date(invoiceDate);
+        }
+
+        // Validate the parsed date
+        if (isNaN(parsedInvoiceDate.getTime())) {
+          console.log("Invalid invoiceDate, using current date");
+          parsedInvoiceDate = new Date();
+        }
+      } catch (error) {
+        console.log("Error parsing invoiceDate:", error, "using current date");
+        parsedInvoiceDate = new Date();
+      }
+    } else {
+      parsedInvoiceDate = new Date();
+    }
+
+    console.log("Parsed invoiceDate:", parsedInvoiceDate.toISOString());
 
     // Test database connection first
     try {
@@ -161,7 +220,7 @@ export async function POST(request: NextRequest) {
             outstanding: totalAmount,
             isFullyPaid: false,
             createdBy: session.user.id,
-            saleDate: invoiceDate ? new Date(invoiceDate) : new Date(),
+            saleDate: parsedInvoiceDate,
           })
           .returning();
 

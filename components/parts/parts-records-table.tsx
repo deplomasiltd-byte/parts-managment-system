@@ -78,6 +78,7 @@ export function PartsRecordsTable() {
   const [selectedRecord, setSelectedRecord] = useState<PartsRecord | null>(
     null
   );
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState<number | null>(null);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -186,12 +187,32 @@ export function PartsRecordsTable() {
 
   const handleDownloadPDF = async (recordId: number) => {
     try {
-      const response = await fetch(`/api/issue-parts/${recordId}/pdf`);
+      setIsGeneratingPDF(recordId);
+
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      const response = await fetch(`/api/issue-parts/${recordId}/pdf`, {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error("Failed to generate PDF");
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to generate PDF: ${response.status} ${errorText}`
+        );
       }
 
       const blob = await response.blob();
+
+      // Verify blob is not empty
+      if (blob.size === 0) {
+        throw new Error("Generated PDF is empty");
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.style.display = "none";
@@ -201,15 +222,31 @@ export function PartsRecordsTable() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      console.log(`PDF generated successfully for record ${recordId}`);
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      alert("خطا در تولید فایل PDF");
+      if (error instanceof Error) {
+        if (error.name === "AbortError") {
+          alert("تولید PDF بیش از حد طولانی شد. لطفاً دوباره تلاش کنید.");
+        } else {
+          alert(`خطا در تولید فایل PDF: ${error.message}`);
+        }
+      } else {
+        alert("خطا در تولید فایل PDF");
+      }
+    } finally {
+      setIsGeneratingPDF(null);
     }
   };
 
   const handlePrintPDF = async (record: PartsRecord) => {
-    // For now, use the same PDF generation as download
-    await handleDownloadPDF(record.id);
+    setIsGeneratingPDF(record.id);
+    try {
+      await handleDownloadPDF(record.id);
+    } finally {
+      setIsGeneratingPDF(null);
+    }
   };
 
   return (
@@ -349,6 +386,7 @@ export function PartsRecordsTable() {
                           size="sm"
                           className="flex-1"
                           onClick={() => setSelectedRecord(record)}
+                          disabled={isGeneratingPDF === record.id}
                         >
                           <Eye className="ml-2 h-4 w-4" />
                           مشاهده جزئیات
@@ -363,9 +401,14 @@ export function PartsRecordsTable() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownloadPDF(record.id)}
+                      disabled={isGeneratingPDF === record.id}
                       className="flex-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                     >
-                      <Printer className="ml-2 h-4 w-4" />
+                      {isGeneratingPDF === record.id ? (
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Printer className="ml-2 h-4 w-4" />
+                      )}
                       چاپ
                     </Button>
                   </div>
@@ -462,6 +505,7 @@ export function PartsRecordsTable() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setSelectedRecord(record)}
+                                disabled={isGeneratingPDF === record.id}
                               >
                                 <Eye className="ml-2 h-4 w-4" />
                                 مشاهده جزئیات
@@ -476,9 +520,14 @@ export function PartsRecordsTable() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleDownloadPDF(record.id)}
+                            disabled={isGeneratingPDF === record.id}
                             className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                           >
-                            <Printer className="ml-2 h-4 w-4" />
+                            {isGeneratingPDF === record.id ? (
+                              <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Printer className="ml-2 h-4 w-4" />
+                            )}
                             چاپ
                           </Button>
                         </div>
@@ -503,6 +552,17 @@ function RecordDetailDialog({
   record: PartsRecord | null;
   onPrint: () => void;
 }) {
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  const handlePrintClick = async () => {
+    setIsPrinting(true);
+    try {
+      await onPrint();
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   if (!record) return null;
 
   return (
@@ -595,11 +655,16 @@ function RecordDetailDialog({
             {/* Print Button */}
             <div className="flex justify-center pt-4 border-t">
               <Button
-                onClick={onPrint}
+                onClick={handlePrintClick}
+                disabled={isPrinting}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"
               >
-                <Printer className="ml-2 h-5 w-5" />
+                {isPrinting ? (
+                  <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Printer className="ml-2 h-5 w-5" />
+                )}
                 چاپ فاکتور
               </Button>
             </div>

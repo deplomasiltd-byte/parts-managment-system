@@ -112,8 +112,8 @@ export function ExpenseForm({
       currency: expense?.currency || "USD",
       category: expense?.category || "",
       expenseDate: expense?.expenseDate
-        ? new Date(expense.expenseDate).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0],
+        ? new Date(expense.expenseDate).toLocaleDateString("fa-IR")
+        : new Date().toLocaleDateString("fa-IR"),
       receiptNumber: expense?.receiptNumber || "",
       vendor: expense?.vendor || "",
     },

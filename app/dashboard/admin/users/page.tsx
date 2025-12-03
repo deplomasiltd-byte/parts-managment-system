@@ -217,7 +217,7 @@ export default function AdminDashboard() {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString();
+      return new Date(dateString).toLocaleDateString("fa-IR");
     } catch {
       return "Invalid date";
     }

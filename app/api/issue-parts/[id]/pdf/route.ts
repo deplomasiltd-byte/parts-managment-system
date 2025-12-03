@@ -177,6 +177,9 @@ export async function GET(
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="invoice-${customer.id}.pdf"`,
+        "Cache-Control": "public, max-age=3600", // Cache for 1 hour
+        ETag: `"pdf-${customer.id}-${Date.now()}"`,
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (err) {

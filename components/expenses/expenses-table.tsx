@@ -275,7 +275,7 @@ export function ExpensesTable() {
 
   // Format date
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString("fa-IR");
   };
 
   // Define columns for mobile and desktop

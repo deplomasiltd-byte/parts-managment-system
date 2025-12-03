@@ -73,7 +73,7 @@ export function IssuePartsTable({ refreshTrigger }: IssuePartsTableProps) {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0] // YYYY-MM-DD format for HTML date input
   );
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [notes, setNotes] = useState("");

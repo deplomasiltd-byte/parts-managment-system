@@ -1,6 +1,7 @@
 // lib/pdf-generator.ts
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
+import { faIR } from "date-fns/locale";
 import fs from "fs/promises";
 import path from "path";
 
@@ -39,77 +40,123 @@ const LIGHT_GRAY: [number, number, number] = [240, 240, 240];
 const TEXT_COLOR: [number, number, number] = [50, 50, 50];
 
 // ----------------------
-// Cache for static assets
+// Global cache for static assets (persists across requests)
 // ----------------------
 let cachedFont: string | null = null;
 let cachedLogo: string | null = null;
 let cachedWatermark: string | null = null;
 let cacheInitialized = false;
+let cachePromise: Promise<void> | null = null;
 
 // ----------------------
-// Initialize cache (load all assets once)
+// Initialize cache (load all assets once, with promise caching to prevent race conditions)
 // ----------------------
 const initializeCache = async (): Promise<void> => {
   if (cacheInitialized) return;
 
-  try {
-    // Load font
-    try {
-      const fontPath = path.join(
-        process.cwd(),
-        "public",
-        "fonts",
-        "Vazirmatn-Regular.ttf"
-      );
-      const fontBuffer = await fs.readFile(fontPath);
-      cachedFont = fontBuffer.toString("base64");
-    } catch {
-      console.warn("⚠️ Persian font not found, fallback to default.");
-      cachedFont = "";
-    }
-
-    // Load logo
-    try {
-      const logoPath = path.join(process.cwd(), "public", "logo.png");
-      const logoBuffer = await fs.readFile(logoPath);
-      cachedLogo = `data:image/png;base64,${logoBuffer.toString("base64")}`;
-    } catch {
-      console.warn("⚠️ logo.png missing");
-      cachedLogo = "";
-    }
-
-    // Load watermark
-    try {
-      const watermarkPath = path.join(process.cwd(), "public", "watermark.png");
-      const watermarkBuffer = await fs.readFile(watermarkPath);
-      cachedWatermark = `data:image/png;base64,${watermarkBuffer.toString("base64")}`;
-    } catch {
-      console.warn("⚠️ watermark.png missing");
-      cachedWatermark = "";
-    }
-
-    cacheInitialized = true;
-    console.log("✅ PDF assets cached successfully");
-  } catch (error) {
-    console.error("Error initializing PDF cache:", error);
-    // Set empty values to prevent repeated failures
-    cachedFont = "";
-    cachedLogo = "";
-    cachedWatermark = "";
-    cacheInitialized = true;
+  // If cache is being initialized, wait for it
+  if (cachePromise) {
+    await cachePromise;
+    return;
   }
+
+  cachePromise = (async () => {
+    try {
+      // Load font with timeout
+      try {
+        const fontPath = path.join(
+          process.cwd(),
+          "public",
+          "fonts",
+          "Vazirmatn-Regular.ttf"
+        );
+        const fontBuffer = await Promise.race([
+          fs.readFile(fontPath),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Font loading timeout")), 3000)
+          ),
+        ]);
+        cachedFont = fontBuffer.toString("base64");
+      } catch {
+        console.warn("⚠️ Persian font not found, fallback to default.");
+        cachedFont = "";
+      }
+
+      // Load logo with timeout
+      try {
+        const logoPath = path.join(process.cwd(), "public", "logo.png");
+        const logoBuffer = await Promise.race([
+          fs.readFile(logoPath),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Logo loading timeout")), 3000)
+          ),
+        ]);
+        cachedLogo = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+      } catch {
+        console.warn("⚠️ logo.png missing");
+        cachedLogo = "";
+      }
+
+      // Load watermark with timeout
+      try {
+        const watermarkPath = path.join(
+          process.cwd(),
+          "public",
+          "watermark.png"
+        );
+        const watermarkBuffer = await Promise.race([
+          fs.readFile(watermarkPath),
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Watermark loading timeout")),
+              3000
+            )
+          ),
+        ]);
+        cachedWatermark = `data:image/png;base64,${watermarkBuffer.toString("base64")}`;
+      } catch {
+        console.warn("⚠️ watermark.png missing");
+        cachedWatermark = "";
+      }
+
+      cacheInitialized = true;
+      console.log("✅ PDF assets cached successfully");
+    } catch (error) {
+      console.error("Error initializing PDF cache:", error);
+      // Set empty values to prevent repeated failures
+      cachedFont = "";
+      cachedLogo = "";
+      cachedWatermark = "";
+      cacheInitialized = true;
+    }
+  })();
+
+  await cachePromise;
+  cachePromise = null;
 };
 
 // ----------------------
-// Get cached assets
+// Get cached assets with fallback handling
 // ----------------------
 const getCachedAssets = async () => {
-  await initializeCache();
-  return {
-    font: cachedFont || "",
-    logo: cachedLogo || "",
-    watermark: cachedWatermark || "",
-  };
+  try {
+    await initializeCache();
+    return {
+      font: cachedFont || "",
+      logo: cachedLogo || "",
+      watermark: cachedWatermark || "",
+    };
+  } catch (error) {
+    console.warn(
+      "Cache initialization failed, proceeding without assets:",
+      error
+    );
+    return {
+      font: "",
+      logo: "",
+      watermark: "",
+    };
+  }
 };
 
 // ----------------------
@@ -224,9 +271,14 @@ export async function generateInvoicePDF(
       40,
       90
     );
-    doc.text(`Date: ${format(data.createdAt, "PPP")}`, pageWidth - 40, 90, {
-      align: "right",
-    });
+    doc.text(
+      `Date: ${format(data.createdAt, "PPP", { locale: faIR })}`,
+      pageWidth - 40,
+      90,
+      {
+        align: "right",
+      }
+    );
 
     y += 60;
 

@@ -457,13 +457,7 @@ export default function PriorityActionsPage() {
       .map((part) => ({
         part_number: part.part_number,
         name: part.name,
-        section: part.section,
-        min_stock: part.min_stock,
-        current_stock: part.current_stock,
-        deficit: part.deficit,
         requested_quantity: part.requested_quantity,
-        cost_price: part.cost_price,
-        total_cost: part.total_cost,
       }));
 
     if (partsToExport.length === 0) {
