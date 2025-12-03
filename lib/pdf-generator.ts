@@ -1,11 +1,9 @@
 // lib/pdf-generator.ts
 import { jsPDF } from "jspdf";
-import { format } from "date-fns";
-import { faIR } from "date-fns/locale";
 import fs from "fs/promises";
 import path from "path";
-
 import { Part } from "@/lib/types";
+import { formatPersianDate, formatPersianCurrency } from "@/lib/persian-date";
 
 // ----------------------
 // Types
@@ -40,123 +38,58 @@ const LIGHT_GRAY: [number, number, number] = [240, 240, 240];
 const TEXT_COLOR: [number, number, number] = [50, 50, 50];
 
 // ----------------------
-// Global cache for static assets (persists across requests)
+// Cached Assets
 // ----------------------
 let cachedFont: string | null = null;
 let cachedLogo: string | null = null;
 let cachedWatermark: string | null = null;
-let cacheInitialized = false;
-let cachePromise: Promise<void> | null = null;
 
 // ----------------------
-// Initialize cache (load all assets once, with promise caching to prevent race conditions)
+// Initialize Fonts & Assets
 // ----------------------
-const initializeCache = async (): Promise<void> => {
-  if (cacheInitialized) return;
-
-  // If cache is being initialized, wait for it
-  if (cachePromise) {
-    await cachePromise;
-    return;
+const initializeAssets = async () => {
+  if (!cachedFont) {
+    try {
+      const fontPath = path.join(
+        process.cwd(),
+        "public/fonts/Vazirmatn-Regular.ttf"
+      );
+      const fontBuffer = await fs.readFile(fontPath);
+      cachedFont = fontBuffer.toString("base64");
+    } catch {
+      cachedFont = "";
+    }
   }
 
-  cachePromise = (async () => {
+  if (!cachedLogo) {
     try {
-      // Load font with timeout
-      try {
-        const fontPath = path.join(
-          process.cwd(),
-          "public",
-          "fonts",
-          "Vazirmatn-Regular.ttf"
-        );
-        const fontBuffer = await Promise.race([
-          fs.readFile(fontPath),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Font loading timeout")), 3000)
-          ),
-        ]);
-        cachedFont = fontBuffer.toString("base64");
-      } catch {
-        console.warn("⚠️ Persian font not found, fallback to default.");
-        cachedFont = "";
-      }
-
-      // Load logo with timeout
-      try {
-        const logoPath = path.join(process.cwd(), "public", "logo.png");
-        const logoBuffer = await Promise.race([
-          fs.readFile(logoPath),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Logo loading timeout")), 3000)
-          ),
-        ]);
-        cachedLogo = `data:image/png;base64,${logoBuffer.toString("base64")}`;
-      } catch {
-        console.warn("⚠️ logo.png missing");
-        cachedLogo = "";
-      }
-
-      // Load watermark with timeout
-      try {
-        const watermarkPath = path.join(
-          process.cwd(),
-          "public",
-          "watermark.png"
-        );
-        const watermarkBuffer = await Promise.race([
-          fs.readFile(watermarkPath),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Watermark loading timeout")),
-              3000
-            )
-          ),
-        ]);
-        cachedWatermark = `data:image/png;base64,${watermarkBuffer.toString("base64")}`;
-      } catch {
-        console.warn("⚠️ watermark.png missing");
-        cachedWatermark = "";
-      }
-
-      cacheInitialized = true;
-      console.log("✅ PDF assets cached successfully");
-    } catch (error) {
-      console.error("Error initializing PDF cache:", error);
-      // Set empty values to prevent repeated failures
-      cachedFont = "";
+      const logoBuffer = await fs.readFile(
+        path.join(process.cwd(), "public/logo.png")
+      );
+      cachedLogo = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+    } catch {
       cachedLogo = "";
-      cachedWatermark = "";
-      cacheInitialized = true;
     }
-  })();
+  }
 
-  await cachePromise;
-  cachePromise = null;
+  if (!cachedWatermark) {
+    try {
+      const watermarkBuffer = await fs.readFile(
+        path.join(process.cwd(), "public/watermark.png")
+      );
+      cachedWatermark = `data:image/png;base64,${watermarkBuffer.toString("base64")}`;
+    } catch {
+      cachedWatermark = "";
+    }
+  }
 };
 
 // ----------------------
-// Get cached assets with fallback handling
+// Persian numbers helper
 // ----------------------
-const getCachedAssets = async () => {
-  try {
-    await initializeCache();
-    return {
-      font: cachedFont || "",
-      logo: cachedLogo || "",
-      watermark: cachedWatermark || "",
-    };
-  } catch (error) {
-    console.warn(
-      "Cache initialization failed, proceeding without assets:",
-      error
-    );
-    return {
-      font: "",
-      logo: "",
-      watermark: "",
-    };
-  }
+const toPersianNumber = (num: number | string) => {
+  const p = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  return String(num).replace(/\d/g, (d) => p[+d]);
 };
 
 // ----------------------
@@ -165,278 +98,221 @@ const getCachedAssets = async () => {
 export async function generateInvoicePDF(
   data: InvoiceData
 ): Promise<Uint8Array> {
-  try {
-    // Validate input data
-    if (!data || !data.customer || !data.sales || data.sales.length === 0) {
-      throw new Error("Invalid invoice data provided");
-    }
+  await initializeAssets();
 
-    if (!data.customer.name) {
-      throw new Error("Customer name is required");
-    }
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  let y = 120;
 
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "pt",
-      format: "a4",
-    });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    let y = 120;
-
-    // Get cached assets
-    const {
-      font: fontBase64,
-      logo: logoBase64,
-      watermark: watermarkBase64,
-    } = await getCachedAssets();
-
-    // Load font
-    let fontLoaded = false;
-    if (fontBase64) {
-      try {
-        doc.addFileToVFS("vazirmatn.ttf", fontBase64);
-        doc.addFont("vazirmatn.ttf", "vazirmatn", "normal");
-        fontLoaded = true;
-      } catch (err) {
-        console.warn("Failed to load font, using default", err);
-      }
-    } else {
-      console.warn("No font data available, using default font");
-    }
-
-    // ----------------------
-    // WATERMARK background
-    // ----------------------
-    if (watermarkBase64) {
-      const wmSize = 300;
-      const gs = doc.GState({ opacity: 0.1 });
-      doc.setGState(gs);
-
-      doc.addImage(
-        watermarkBase64,
-        "PNG",
-        (pageWidth - wmSize) / 2,
-        (pageHeight - wmSize) / 2,
-        wmSize,
-        wmSize,
-        "",
-        "FAST"
-      );
-
-      const gsReset = doc.GState({ opacity: 1 });
-      doc.setGState(gsReset);
-    }
-
-    // ----------------------
-    // HEADER
-    // ----------------------
-    doc.setFillColor(...DARK_GRAY);
-    doc.rect(0, 0, pageWidth, 120, "F");
-
-    if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", 40, 15, 70, 70);
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(...LIGHT_GRAY);
-    doc.text("Diplomasi Ltd", pageWidth / 2, 40, { align: "center" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text("Kabul - Afghanistan | Main Road | Shop #12", pageWidth / 2, 60, {
-      align: "center",
-    });
-
-    if (fontLoaded) {
-      doc.setFont("vazirmatn", "normal");
-      doc.setFontSize(14);
-      doc.text("بل پرزه جات وسایط", pageWidth / 2, 80, { align: "center" });
-
-      doc.setFontSize(12);
-      doc.text(
-        "کابل - افغانستان | سرک عمومی | دکان شماره ۱۲",
-        pageWidth / 2,
-        100,
-        { align: "center" }
-      );
-    }
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(
-      `Invoice ID: INV-${String(data.issueId).padStart(4, "0")}`,
-      40,
-      90
-    );
-    doc.text(
-      `Date: ${format(data.createdAt, "PPP", { locale: faIR })}`,
-      pageWidth - 40,
-      90,
-      {
-        align: "right",
-      }
-    );
-
-    y += 60;
-
-    // ----------------------
-    // TABLE HEADER
-    // ----------------------
-    const colWidth = (pageWidth - 80) / 5;
-    doc.setFillColor(...DARK_RED);
-    doc.rect(40, y, pageWidth - 80, 25, "F");
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
-    doc.text("#", 45, y + 17);
-    doc.text("Name", 45 + colWidth, y + 17);
-    doc.text("Qty", 45 + colWidth * 2, y + 17);
-    doc.text("Unit Price", 45 + colWidth * 3, y + 17);
-    doc.text("Total", 45 + colWidth * 4, y + 17);
-
-    y += 30;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(...TEXT_COLOR);
-
-    // ----------------------
-    // TABLE ROWS
-    // ----------------------
-    let totalAmount = 0;
-
-    data.sales.forEach((s, idx) => {
-      if (y > pageHeight - 140) {
-        doc.addPage();
-        y = 80;
-
-        if (watermarkBase64) {
-          const wmSize2 = 300;
-          const gs = doc.GState({ opacity: 0.1 });
-          doc.setGState(gs);
-
-          doc.addImage(
-            watermarkBase64,
-            "PNG",
-            (pageWidth - wmSize2) / 2,
-            (pageHeight - wmSize2) / 2,
-            wmSize2,
-            wmSize2,
-            "",
-            "FAST"
-          );
-
-          const gsReset = doc.GState({ opacity: 1 });
-          doc.setGState(gsReset);
-        }
-      }
-
-      const totalValue =
-        typeof s.sale.totalAmount === "string"
-          ? parseFloat(s.sale.totalAmount)
-          : s.sale.totalAmount;
-      const qty = s.sale.quantity;
-      const unitPrice = qty ? totalValue / qty : 0;
-      totalAmount += totalValue;
-
-      if (idx % 2 === 0) {
-        doc.setFillColor(...LIGHT_GRAY);
-      } else {
-        doc.setFillColor(255, 255, 255);
-      }
-      doc.rect(40, y, pageWidth - 80, 20, "F");
-
-      doc.text(String(idx + 1), 45, y + 14);
-      doc.text(s.part?.name || "N/A", 45 + colWidth, y + 14);
-      doc.text(String(qty), 45 + colWidth * 2, y + 14);
-      doc.text(unitPrice.toFixed(2), 45 + colWidth * 3, y + 14);
-      doc.text(totalValue.toFixed(2), 45 + colWidth * 4, y + 14);
-
-      y += 20;
-    });
-
-    // ----------------------
-    // TOTAL BOX
-    // ----------------------
-    y += 30;
-    doc.setFillColor(...LIGHT_GRAY);
-    doc.rect(pageWidth - 200, y, 160, 40, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DARK_RED);
-    doc.text("Total:", pageWidth - 180, y + 15);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...TEXT_COLOR);
-    doc.text(`${totalAmount.toFixed(2)} AFN`, pageWidth - 180, y + 35);
-
-    // ----------------------
-    // SIGNATURE AREA
-    // ----------------------
-    y += 100;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(...TEXT_COLOR);
-    doc.text("Authorized Signature", 40, y);
-    doc.text("Company Stamp", pageWidth - 200, y);
-
-    if (fontLoaded) {
-      doc.setFont("vazirmatn", "normal");
-      doc.text("امضاء مسئول", 40, y + 20);
-      doc.text("مهر شرکت", pageWidth - 200, y + 20);
-    }
-
-    // ----------------------
-    // FOOTER
-    // ----------------------
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(120, 120, 120);
-    doc.text(
-      "This invoice is system-generated and requires no signature.",
-      pageWidth / 2,
-      pageHeight - 30,
-      { align: "center" }
-    );
-
-    if (fontLoaded) {
-      doc.setFont("vazirmatn", "normal");
-      doc.text(
-        "این فاکتور توسط سیستم تولید شده و نیاز به امضاء ندارد.",
-        pageWidth / 2,
-        pageHeight - 15,
-        { align: "center" }
-      );
-    }
-
-    // ----------------------
-    // OUTPUT
-    // ----------------------
-    const buffer = doc.output("arraybuffer") as ArrayBuffer;
-    return new Uint8Array(buffer);
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    throw error;
+  // ----------------------
+  // Add custom font
+  // ----------------------
+  if (cachedFont) {
+    doc.addFileToVFS("Vazirmatn-Regular.ttf", cachedFont);
+    doc.addFont("Vazirmatn-Regular.ttf", "Vazirmatn", "normal");
+    doc.setFont("Vazirmatn");
+  } else {
+    doc.setFont("helvetica");
   }
+
+  // ----------------------
+  // Watermark
+  // ----------------------
+  if (cachedWatermark) {
+    const wmSize = 300;
+    doc.setGState(doc.GState({ opacity: 0.2 }));
+    doc.addImage(
+      cachedWatermark,
+      "PNG",
+      (pageWidth - wmSize) / 2,
+      (pageHeight - wmSize) / 2,
+      wmSize,
+      wmSize,
+      "",
+      "FAST"
+    );
+    doc.setGState(doc.GState({ opacity: 1 }));
+  }
+
+  // ----------------------
+  // Header
+  // ----------------------
+  doc.setFillColor(...DARK_GRAY);
+  doc.rect(0, 0, pageWidth, 120, "F");
+
+  if (cachedLogo) doc.addImage(cachedLogo, "PNG", 40, 15, 70, 70);
+
+  doc.setFontSize(22);
+  doc.setTextColor(...LIGHT_GRAY);
+  doc.text("Diplomasi Ltd", pageWidth / 2, 40, { align: "center" });
+
+  doc.setFontSize(11);
+  doc.text(
+    "Between the second and third intersections of Parvan",
+    pageWidth / 2,
+    60,
+    { align: "center" }
+  );
+
+  // ⭐ PHONE NUMBER ADDED HERE
+  doc.text("Phone: +93 744 441 079", pageWidth / 2, 75, { align: "center" });
+
+  doc.setFontSize(14);
+  doc.text("بل پرزه جات وسایط", pageWidth / 2, 90, { align: "center" });
+
+  doc.setFontSize(12);
+  doc.text(
+    "کابل -بین چهار راهی پروان دوم و سوم مقابل قصر زرین",
+    pageWidth / 2,
+    110,
+    { align: "center" }
+  );
+
+  // ----------------------
+  // Invoice ID & Date
+  // ----------------------
+  doc.setFontSize(10);
+  doc.text(
+    `آیدی فاکتور: INV-${toPersianNumber(data.issueId.toString().padStart(4, "0"))}`,
+    40,
+    140
+  );
+
+  doc.text(`تاریخ: ${formatPersianDate(data.createdAt)}`, pageWidth - 40, 140, {
+    align: "right",
+  });
+
+  y = 180;
+
+  // ----------------------
+  // Table Header
+  // ----------------------
+  const colWidth = (pageWidth - 80) / 5;
+
+  doc.setFillColor(...DARK_RED);
+  doc.rect(40, y, pageWidth - 80, 25, "F");
+
+  doc.setFontSize(10);
+  doc.setTextColor(255, 255, 255);
+
+  const headers = ["#", "نام", "مقدار", "قیمت واحد", "مجموع"];
+  headers.forEach((h, i) => doc.text(h, 45 + colWidth * i, y + 17));
+
+  y += 30;
+  doc.setTextColor(...TEXT_COLOR);
+
+  // ----------------------
+  // Table Rows
+  // ----------------------
+  let totalAmount = 0;
+
+  data.sales.forEach((s, idx) => {
+    if (y > pageHeight - 140) {
+      doc.addPage();
+      y = 80;
+
+      if (cachedWatermark) {
+        const wm = 300;
+        doc.setGState(doc.GState({ opacity: 0.1 }));
+        doc.addImage(
+          cachedWatermark,
+          "PNG",
+          (pageWidth - wm) / 2,
+          (pageHeight - wm) / 2,
+          wm,
+          wm,
+          "",
+          "FAST"
+        );
+        doc.setGState(doc.GState({ opacity: 1 }));
+      }
+    }
+
+    const totalValue =
+      typeof s.sale.totalAmount === "string"
+        ? parseFloat(s.sale.totalAmount)
+        : s.sale.totalAmount;
+
+    const qty = s.sale.quantity;
+    const unitPrice = qty ? totalValue / qty : 0;
+
+    totalAmount += totalValue;
+
+    // Alternating row colors
+    if (idx % 2 === 0) {
+      doc.setFillColor(...LIGHT_GRAY);
+    } else {
+      doc.setFillColor(255, 255, 255);
+    }
+
+    doc.rect(40, y, pageWidth - 80, 20, "F");
+
+    const rowValues = [
+      toPersianNumber(idx + 1),
+      s.part?.name || "نامشخص",
+      toPersianNumber(qty),
+      toPersianNumber(unitPrice.toFixed(2)),
+      toPersianNumber(totalValue.toFixed(2)),
+    ];
+
+    rowValues.forEach((val, i) => {
+      doc.text(val, 45 + colWidth * i, y + 14);
+    });
+
+    y += 20;
+  });
+
+  // ----------------------
+  // Total Box
+  // ----------------------
+  y += 30;
+
+  doc.setFillColor(...LIGHT_GRAY);
+  doc.rect(pageWidth - 200, y, 160, 40, "F");
+
+  doc.setFontSize(10);
+  doc.setTextColor(...DARK_RED);
+  doc.text("مجموع کل:", pageWidth - 180, y + 15);
+
+  doc.setTextColor(...TEXT_COLOR);
+  doc.text(`${formatPersianCurrency(totalAmount)}`, pageWidth - 180, y + 35);
+
+  // ----------------------
+  // Signature Section
+  // ----------------------
+  y += 100;
+
+  doc.setFontSize(12);
+  doc.setTextColor(...TEXT_COLOR);
+
+  doc.text("امضاء مسئول", 40, y);
+  doc.text("مهر شرکت", pageWidth - 200, y);
+
+  // ----------------------
+  // Footer
+  // ----------------------
+  doc.setFontSize(9);
+  doc.setTextColor(120, 120, 120);
+
+  doc.text(
+    "جنس فروخته شده بعد از 24 ساعت واپس گرفته نمیشود.",
+    pageWidth / 2,
+    pageHeight - 20,
+    { align: "center" }
+  );
+
+  return new Uint8Array(doc.output("arraybuffer"));
 }
 
 // ----------------------
-// Helpers for Blob/Base64
+// Helpers
 // ----------------------
-export async function generateInvoiceBlob(data: InvoiceData): Promise<Blob> {
-  const uint8 = await generateInvoicePDF(data);
-  const arrayBuffer = uint8.slice().buffer;
-  return new Blob([arrayBuffer], { type: "application/pdf" });
-}
-
 export async function generateInvoiceBase64(
   data: InvoiceData
 ): Promise<string> {
-  const uint8 = await generateInvoicePDF(data);
-  return Buffer.from(uint8).toString("base64");
+  const pdf = await generateInvoicePDF(data);
+  return Buffer.from(pdf).toString("base64");
 }
 
 export async function generateInvoiceDataURL(
